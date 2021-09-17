@@ -1,6 +1,20 @@
 import csv
 import json
+import logging
 import os
+
+log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+logger = logging.getLogger(__name__)
+
+fileHandler = logging.FileHandler("parse.log")
+fileHandler.setFormatter(log_formatter)
+fileHandler.setLevel(logging.WARNING)
+logger.addHandler(fileHandler)
+
+consoleHandler = logging.StreamHandler()
+consoleHandler.setFormatter(log_formatter)
+consoleHandler.setLevel(logging.INFO)
+logger.addHandler(consoleHandler)
 
 
 def process_bloom_time(bloom_time_string):
@@ -42,7 +56,7 @@ def process_bloom_time(bloom_time_string):
                     try:
                         month_list.append(conversion[fixed_month_string.strip()])
                     except KeyError as e:
-                        print(e)
+                        logger.error("KeyError while processing:\n" + bloom_time_string)
 
     return month_list
 
@@ -55,6 +69,7 @@ def process_plant_date(day, month, year):
 
             return '-'.join([day, month, year])
     except ValueError:
+        logger.error(f"ValueError while processing:\nDay:{day}, Month:{month}, Year:{year}")
         return None
 
 
@@ -79,6 +94,7 @@ def process_hardiness(hardiness_data):
             hardiness = int(elem.strip())
             clean_hardiness.append(hardiness)
         except ValueError:
+            logger.error('ValueError while processing:\n' + hardiness_data)
             continue
 
     return clean_hardiness
