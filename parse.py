@@ -2,19 +2,9 @@ import csv
 import json
 import logging
 import os
+import sys
 
-log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
 logger = logging.getLogger(__name__)
-
-fileHandler = logging.FileHandler("parse.log")
-fileHandler.setFormatter(log_formatter)
-fileHandler.setLevel(logging.WARNING)
-logger.addHandler(fileHandler)
-
-consoleHandler = logging.StreamHandler()
-consoleHandler.setFormatter(log_formatter)
-consoleHandler.setLevel(logging.INFO)
-logger.addHandler(consoleHandler)
 
 
 def process_bloom_time(bloom_time_string):
@@ -150,7 +140,24 @@ def brahms_row_to_payload(row):
 
 
 def construct_img_filepath(row):
-    return os.path.join(row[1], row[0].replace('\ufeff', ''))
+    """
+    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|cultivar|vernacularname
+    :param row:
+    :return:
+    """
+    if len(row) < 6:
+        logger.error(f"Invalid row: {row}")
+        raise ValueError
+
+    # If we're not running on the VM with the mapped drive, change the filepath to Box
+    if sys.platform == 'darwin':
+        box_path = os.path.join(os.path.expanduser('~'), 'Box', 'RBG-Shared', 'Photo Library - Plant Records',
+                                'AA BRAHMS Resized Photos', '')
+        path_from_row = os.path.join(row[2].replace('B:\\', box_path), row[0].replace('\ufeff', ''))
+    else:
+        path_from_row = os.path.join(row[2], row[0].replace('\ufeff', ''))
+
+    return path_from_row
 
 
 def convert_to_json(dictionary):
@@ -158,11 +165,16 @@ def convert_to_json(dictionary):
 
 
 def extract_species_info(row):
+    """
+    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|cultivar|vernacularname
+    :param row:
+    :return:
+    """
     payload = {
-        "name": row[3] if row[3] != 'NULL' else None,
-        "cultivar": row[4] if row[4] != 'NULL' else None,
-        "vernacular_name": row[5] if row[5] != 'NULL' else None,
-        "genus": row[2]
+        "name": row[4] if row[4] != 'NULL' else None,
+        "cultivar": row[5] if row[5] != 'NULL' else None,
+        "vernacular_name": row[6] if row[6] != 'NULL' else None,
+        "genus": row[3]
     }
 
     return payload

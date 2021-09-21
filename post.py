@@ -1,6 +1,10 @@
+import logging
+import sys
 from urllib.parse import urlunsplit
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class RBGAPIPoster:
@@ -19,7 +23,11 @@ class RBGAPIPoster:
     def get_tokens(self):
         url = urlunsplit((self.scheme, self.netloc, '/plants/api/token/', '', ''))
         response = self.session.post(url, data={'username': self.username, 'password': self.password})
-        assert response.status_code == 200
+        try:
+            assert response.status_code == 200
+        except AssertionError:
+            logger.error("Failed to get token. Are you sure a user with these credentials exists on the website?")
+            sys.exit(1)
         tokens = {'csrftoken': response.cookies['csrftoken'],
                   'drf_token': response.json()['token']}
         return tokens
