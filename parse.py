@@ -167,8 +167,6 @@ def convert_to_json(dictionary):
 def extract_species_info(row):
     """
     Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|cultivar|vernacularname
-    :param row:
-    :return:
     """
     payload = {
         "name": row[4] if row[4] != 'NULL' else None,
@@ -178,6 +176,13 @@ def extract_species_info(row):
     }
 
     return payload
+
+
+def extract_copyright_info(row):
+    """
+    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|cultivar|vernacularname
+    """
+    return row[1]
 
 
 class BRAHMSExportReader:

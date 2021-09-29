@@ -2,10 +2,12 @@ import argparse
 import logging
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from requests import HTTPError
 
-from parse import BRAHMSExportReader, brahms_row_to_payload, construct_img_filepath, extract_species_info
+from parse import BRAHMSExportReader, brahms_row_to_payload, construct_img_filepath, extract_copyright_info, \
+    extract_species_info
 from post import RBGAPIPoster
 
 log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
@@ -37,23 +39,50 @@ parser.set_defaults(ssl=True)
 args = vars(parser.parse_args())
 
 
+def post_row(poster, row):
+    payload = brahms_row_to_payload(row)
+    root.info(f"Attempting to post: {payload}")
+    try:
+        resp = poster.post_collection(payload)
+        if resp.status_code != 200:
+            root.warning(f"Attempt to post {payload} returned status code: {resp.status_code}")
+    except HTTPError as e:
+        print(e.response.text)
+        root.error(e)
+        root.error(e.response.text)
+        root.error(payload)
+
+
 def post_plant_collections(poster, plant_data_filepath):
     sql_reader = BRAHMSExportReader(file_path=plant_data_filepath, encoding='utf-16le', delimiter='|')
 
-    sql_rows = iter(sql_reader.get_rows())
-    next(sql_rows)  # Skip header row
-    for row in sql_rows:
-        payload = brahms_row_to_payload(row)
-        root.info(f"Attempting to post: {payload}")
-        try:
-            resp = poster.post_collection(payload)
-            if resp.status_code != 200:
-                root.warning(f"Attempt to post {payload} returned status code: {resp.status_code}")
-        except HTTPError as e:
-            print(e.response.text)
-            root.error(e)
-            root.error(e.response.text)
-            root.error(payload)
+    processes = []
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        sql_rows = iter(sql_reader.get_rows())
+        next(sql_rows)  # Skip header row
+        for row in sql_rows:
+            processes.append(executor.submit(post_row, poster, row))
+
+    for task in as_completed(processes):
+        root.info(task.result())
+
+
+def post_image(poster, row):
+    img_filepath = construct_img_filepath(row)
+    species_image_payload = extract_species_info(row)
+    copyright_info = extract_copyright_info(row)
+    root.debug(f"Species query returned {species_image_payload} using {row}")
+    resp = poster.get_species_from_query(species_image_payload)
+    content = resp.json()
+
+    if content['count'] == 1:
+        species_pk = content['results'][0]['id']
+
+        resp = poster.post_species_image(species_pk, img_filepath, copyright_info)
+
+        if resp.status_code != 200:
+            root.warning(f"Attempt to post {img_filepath} for species {species_pk} returned status code: "
+                         f"{resp.status_code}\n{content}")
 
 
 def post_image_to_species(poster, image_data_filepath):
@@ -66,21 +95,13 @@ def post_image_to_species(poster, image_data_filepath):
         img_rows = image_location_reader.get_rows()
         next(img_rows)  # Skip header row
 
-    for row in img_rows:
-        img_filepath = construct_img_filepath(row)
-        species_image_payload = extract_species_info(row)
-        root.debug(f"Species query returned {species_image_payload} using {row}")
-        resp = poster.get_species_from_query(species_image_payload)
-        content = resp.json()
+    processes = []
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        for row in img_rows:
+            processes.append(executor.submit(post_image, poster, row))
 
-        if content['count'] == 1:
-            species_pk = content['results'][0]['id']
-
-            resp = poster.post_species_image(species_pk, img_filepath)
-
-            if resp.status_code != 200:
-                root.warning(f"Attempt to post {img_filepath} for species {species_pk} returned status code: "
-                               f"{resp.status_code}\n{content}")
+    for task in as_completed(processes):
+        root.info(task.result())
 
 
 def main():
@@ -91,11 +112,13 @@ def main():
         sys.exit("[ERROR] Please set RBG_API_USERNAME and RBG_API_PASSWORD environment variables.")
     poster = RBGAPIPoster(username=username, password=password, netloc=args['target'], ssl=args['ssl'])
 
-    plant_data_filepath = args['plant_data_path']
-    image_data_filepath = args['image_data_path']
+    if args['plant_data_path']:
+        plant_data_filepath = args['plant_data_path']
+        post_plant_collections(poster, plant_data_filepath)
 
-    post_plant_collections(poster, plant_data_filepath)
-    post_image_to_species(poster, image_data_filepath)
+    if args['image_data_path']:
+        image_data_filepath = args['image_data_path']
+        post_image_to_species(poster, image_data_filepath)
 
 
 if __name__ == '__main__':

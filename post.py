@@ -52,10 +52,10 @@ class RBGAPIPoster:
         r.raise_for_status()
         return r
 
-    def post_species_image(self, pk, file_path):
+    def post_species_image(self, pk, file_path, copyright_info):
         url = urlunsplit((self.scheme, self.netloc, f'/plants/api/species/{pk}/set-image/', '', ''))
 
         with open(file_path, 'rb') as f:
-            r = self.session.post(url, files={'image': f})
+            r = self.session.post(url, data={'copyright_info': copyright_info}, files={'image': f})
             r.raise_for_status()
             return r
