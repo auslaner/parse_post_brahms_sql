@@ -91,6 +91,10 @@ def process_hardiness(hardiness_data):
 
 
 def brahms_row_to_payload(row):
+    """
+    Assumes row structure:
+    familyname|vernacularfamilyname|genusname|speciesname|cultivar|vernacularname|habit|hardiness|waterregime|exposure|bloomtime|plantsize|colour|gardenlocalityarea|gardenlocalityname|gardenlocalitycode|plantid|latitude|longitude|commemorationcategory|commemorationperson|plantday|plantmonth|plantyear|notonline|lastmodifiedon|str12|str18|str19|str20|str22|str23
+    """
     row = clean_row(row)
     hardiness = process_hardiness(row[7])
     bloom_times = process_bloom_time(row[10]) if row[10] else []
@@ -115,11 +119,12 @@ def brahms_row_to_payload(row):
             "bloom_time": bloom_times,
             "plant_size": row[11],
             "flower_color": row[12],
-            "utah_native": True if row[26] in ['Yes', 'yes', 'x', 'Utah Native'] else False,
-            "plant_select": True if row[27] in ['Yes', 'yes', 'x'] else False,
-            "deer_resist": True if row[28] in ['Yes', 'yes', 'x'] else False,
-            "rabbit_resist": True if row[29] in ['Yes', 'yes', 'x'] else False,
-            "bee_friend": True if row[30] in ['Yes', 'yes', 'x'] else False
+            "utah_native": True if row[26].lower() in ['yes', 'x', 'utah native'] else False,
+            "plant_select": True if row[27].lower() in ['yes', 'x'] else False,
+            "deer_resist": True if row[28].lower() in ['yes', 'x'] else False,
+            "rabbit_resist": True if row[29].lower() in ['yes', 'x'] else False,
+            "bee_friend": True if row[30].lower() in ['yes', 'x'] else False,
+            "high_elevation": True if row[31].lower() in ['yes', 'x'] else False,
         },
         "garden": {
             "area": row[13],
