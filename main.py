@@ -74,6 +74,8 @@ def post_plant_collections(poster, plant_data_filepath, delimiter, encoding):
 
 
 def post_image(poster, row):
+    print(f"\nAttempting to post image row: {row}\n")
+
     img_filepath = construct_img_filepath(row)
     species_image_payload = extract_species_info(row)
     copyright_info = extract_copyright_info(row)
@@ -86,7 +88,7 @@ def post_image(poster, row):
 
         resp = poster.post_species_image(species_pk, img_filepath, copyright_info)
 
-        if resp.status_code != 201:
+        if resp.status_code != 200 or resp.status_code != 201:
             root.warning(f"Attempt to post {img_filepath} for species {species_pk} returned status code: "
                          f"{resp.status_code}")
 
