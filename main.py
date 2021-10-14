@@ -12,7 +12,7 @@ from post import RBGAPIPoster
 
 log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
 root = logging.getLogger()
-root.setLevel(logging.DEBUG)
+root.setLevel(logging.WARNING)
 
 fileHandler = logging.FileHandler("main.log")
 fileHandler.setFormatter(log_formatter)
@@ -30,10 +30,14 @@ parser.add_argument('--ssl', dest='ssl', action='store_true',
                     help='Use SSL for request connections')
 parser.add_argument('--no-ssl', dest='ssl', action='store_false',
                     help='Disable SSL for request connections')
-parser.add_argument('--plant-data-path', default='living_plant_collections.csv',
+parser.add_argument('--plant-data-path',
                     help='Path to CSV file containing BRAHMS data export of living collections')
-parser.add_argument('--image-data-path', default='species_image_locations.csv',
+parser.add_argument('--image-data-path',
                     help='Path to CSV file containing BRAHMS data export of species images and related data')
+parser.add_argument('--delimiter', default=',',
+                    help='Delimiter to use when parsing CSV files')
+parser.add_argument('--encoding', default='utf-8',
+                    help='Encoding to use when reading CSV files')
 parser.set_defaults(ssl=True)
 
 args = vars(parser.parse_args())
@@ -41,20 +45,21 @@ args = vars(parser.parse_args())
 
 def post_row(poster, row):
     payload = brahms_row_to_payload(row)
-    root.info(f"Attempting to post: {payload}")
-    try:
-        resp = poster.post_collection(payload)
-        if resp.status_code != 200:
-            root.warning(f"Attempt to post {payload} returned status code: {resp.status_code}")
-    except HTTPError as e:
-        print(e.response.text)
-        root.error(e)
-        root.error(e.response.text)
-        root.error(payload)
+    if payload:
+        print(f"\nAttempting to post: {payload}\n")
+        try:
+            resp = poster.post_collection(payload)
+            if resp.status_code != 201:
+                root.warning(f"Attempt to post {payload} returned status code: {resp.status_code}")
+        except HTTPError as e:
+            root.error(e)
+            if len(e.response.content) < 1000:
+                root.error(e.response.content)
+            raise
 
 
-def post_plant_collections(poster, plant_data_filepath):
-    sql_reader = BRAHMSExportReader(file_path=plant_data_filepath, encoding='utf-16le', delimiter='|')
+def post_plant_collections(poster, plant_data_filepath, delimiter, encoding):
+    sql_reader = BRAHMSExportReader(file_path=plant_data_filepath, encoding=encoding, delimiter=delimiter)
 
     processes = []
     with ThreadPoolExecutor(max_workers=4) as executor:
@@ -64,7 +69,8 @@ def post_plant_collections(poster, plant_data_filepath):
             processes.append(executor.submit(post_row, poster, row))
 
     for task in as_completed(processes):
-        root.info(task.result())
+        if task.result():
+            root.info(task.result())
 
 
 def post_image(poster, row):
@@ -80,9 +86,9 @@ def post_image(poster, row):
 
         resp = poster.post_species_image(species_pk, img_filepath, copyright_info)
 
-        if resp.status_code != 200:
+        if resp.status_code != 201:
             root.warning(f"Attempt to post {img_filepath} for species {species_pk} returned status code: "
-                         f"{resp.status_code}\n{content}")
+                         f"{resp.status_code}")
 
 
 def post_image_to_species(poster, image_data_filepath):
@@ -101,7 +107,8 @@ def post_image_to_species(poster, image_data_filepath):
             processes.append(executor.submit(post_image, poster, row))
 
     for task in as_completed(processes):
-        root.info(task.result())
+        if task.result():
+            root.info(task.result())
 
 
 def main():
@@ -114,7 +121,7 @@ def main():
 
     if args['plant_data_path']:
         plant_data_filepath = args['plant_data_path']
-        post_plant_collections(poster, plant_data_filepath)
+        post_plant_collections(poster, plant_data_filepath, args['delimiter'], args['encoding'])
 
     if args['image_data_path']:
         image_data_filepath = args['image_data_path']

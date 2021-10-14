@@ -45,8 +45,9 @@ def process_bloom_time(bloom_time_string):
                 if fixed_month_string:
                     try:
                         month_list.append(conversion[fixed_month_string.strip()])
-                    except KeyError as e:
+                    except KeyError:
                         logger.error("KeyError while processing:\n" + bloom_time_string)
+                        raise
 
     return month_list
 
@@ -60,7 +61,7 @@ def process_plant_date(day, month, year):
             return '-'.join([day, month, year])
     except ValueError:
         logger.error(f"ValueError while processing:\nDay:{day}, Month:{month}, Year:{year}")
-        return None
+        raise
 
 
 def clean_row(row):
@@ -85,7 +86,7 @@ def process_hardiness(hardiness_data):
             clean_hardiness.append(hardiness)
         except ValueError:
             logger.error('ValueError while processing:\n' + hardiness_data)
-            continue
+            raise
 
     return clean_hardiness
 
@@ -96,10 +97,26 @@ def brahms_row_to_payload(row):
     familyname|vernacularfamilyname|genusname|speciesname|cultivar|vernacularname|habit|hardiness|waterregime|exposure|bloomtime|plantsize|colour|gardenlocalityarea|gardenlocalityname|gardenlocalitycode|plantid|latitude|longitude|commemorationcategory|commemorationperson|plantday|plantmonth|plantyear|notonline|lastmodifiedon|str12|str18|str19|str20|str22|str23
     """
     row = clean_row(row)
-    hardiness = process_hardiness(row[7])
-    bloom_times = process_bloom_time(row[10]) if row[10] else []
-    plant_date = process_plant_date(day=row[21], month=row[22], year=row[23]) \
-        if (row[21] and row[22] and row[23]) else None
+
+    try:
+        hardiness = process_hardiness(row[7])
+    except ValueError:
+        logger.error(f"Failed to process hardiness for collection with ID {row[16]}")
+        return None
+
+    try:
+        bloom_times = process_bloom_time(row[10]) if row[10] else []
+    except KeyError:
+        logger.error(f"Failed to process bloom time for collection with ID {row[16]}")
+        return None
+
+    try:
+        plant_date = process_plant_date(day=row[21], month=row[22], year=row[23]) \
+            if (row[21] and row[22] and row[23]) else None
+    except ValueError:
+        logger.error(f"Failed to process date for collection with ID {row[16]}")
+        return None
+
     payload = {
         "species": {
             "genus": {
