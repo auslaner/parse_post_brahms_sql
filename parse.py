@@ -145,18 +145,16 @@ def brahms_row_to_payload(row):
 
     plant_id = column_mapping['plantid']
 
-    hardiness = column_mapping['hardiness']
-    if hardiness:
-        try:
-            hardiness = process_hardiness(hardiness)
-        except ValueError:
-            logger.error(f"Failed to process hardiness for collection with ID {plant_id}: {hardiness}")
-            return None
+    try:
+        hardiness = process_hardiness(column_mapping['hardiness']) if column_mapping['hardiness'] else []
+    except ValueError:
+        logger.error(f"Failed to process hardiness for collection with ID {plant_id}: {column_mapping['hardiness']}")
+        return None
 
     try:
         bloom_times = process_bloom_time(column_mapping['bloomtime']) if column_mapping['bloomtime'] else []
     except KeyError:
-        logger.error(f'Failed to process bloom time for collection with ID {plant_id}')
+        logger.error(f"Failed to process bloom time for collection with ID {plant_id}: column_mapping['bloomtime']")
         return None
 
     try:
