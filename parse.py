@@ -46,7 +46,7 @@ def process_bloom_time(bloom_time_string):
                     try:
                         month_list.append(conversion[fixed_month_string.strip()])
                     except KeyError:
-                        logger.error("KeyError while processing:\n" + bloom_time_string)
+                        logger.error('KeyError while processing:\n' + bloom_time_string)
                         raise
 
     return month_list
@@ -60,7 +60,7 @@ def process_plant_date(day, month, year):
 
             return '-'.join([day, month, year])
     except ValueError:
-        logger.error(f"ValueError while processing:\nDay:{day}, Month:{month}, Year:{year}")
+        logger.error(f'ValueError while processing:\nDay:{day}, Month:{month}, Year:{year}')
         raise
 
 
@@ -85,77 +85,133 @@ def process_hardiness(hardiness_data):
             hardiness = int(elem.strip())
             clean_hardiness.append(hardiness)
         except ValueError:
-            logger.error('ValueError while processing:\n' + hardiness_data)
             raise
 
     return clean_hardiness
 
 
-def brahms_row_to_payload(row):
+def get_column_mapping(row):
     """
     Assumes row structure:
-    familyname|vernacularfamilyname|genusname|speciesname|cultivar|vernacularname|habit|hardiness|waterregime|exposure|bloomtime|plantsize|colour|gardenlocalityarea|gardenlocalityname|gardenlocalitycode|plantid|latitude|longitude|commemorationcategory|commemorationperson|plantday|plantmonth|plantyear|notonline|lastmodifiedon|str12|str18|str19|str20|str22|str23
+    familyname|vernacularfamilyname|genusname|speciesname|subspecies|variety|subvariety|forma|subforma|cultivar|vernacularname|habit|hardiness|waterregime|exposure|bloomtime|plantsize|colour|gardenlocalityarea|gardenlocalityname|gardenlocalitycode|plantid|latitude|longitude|commemorationcategory|commemorationperson|plantday|plantmonth|plantyear|notonline|lastmodifiedon|str12|str18|str19|str20|str22|str23
     """
+    column_mapping = {
+        'familyname': row[0],
+        'vernacularfamilyname': row[1],
+        'genusname': row[2],
+        'speciesname': row[3],
+        'subspecies': row[4],
+        'variety': row[5],
+        'subvariety': row[6],
+        'forma': row[7],
+        'subforma': row[8],
+        'cultivar': row[9],
+        'vernacularname': row[10],
+        'habit': row[11],
+        'hardiness': row[12],
+        'waterregime': row[13],
+        'exposure': row[14],
+        'bloomtime': row[15],
+        'plantsize': row[16],
+        'colour': row[17],
+        'gardenlocalityarea': row[18],
+        'gardenlocalityname': row[19],
+        'gardenlocalitycode': row[20],
+        'plantid': row[21],
+        'latitude': row[22],
+        'longitude': row[23],
+        'commemorationcategory': row[24],
+        'commemorationperson': row[25],
+        'plantday': row[26],
+        'plantmonth': row[27],
+        'plantyear': row[28],
+        'notonline': row[29],
+        'lastmodified': row[30],
+        'utahnative': row[31],  # str12
+        'plantselect': row[32],  # str18
+        'deer': row[33],  # str19
+        'rabbit': row[34],  # str20
+        'bee': row[35],  # str22
+        'highelevation': row[36]  # str23
+    }
+
+    return column_mapping
+
+
+def brahms_row_to_payload(row):
     row = clean_row(row)
 
-    try:
-        hardiness = process_hardiness(row[7])
-    except ValueError:
-        logger.error(f"Failed to process hardiness for collection with ID {row[16]}")
-        return None
+    column_mapping = get_column_mapping(row)
+
+    plant_id = column_mapping['plantid']
+
+    hardiness = column_mapping['hardiness']
+    if hardiness:
+        try:
+            hardiness = process_hardiness(hardiness)
+        except ValueError:
+            logger.error(f"Failed to process hardiness for collection with ID {plant_id}: {hardiness}")
+            return None
 
     try:
-        bloom_times = process_bloom_time(row[10]) if row[10] else []
+        bloom_times = process_bloom_time(column_mapping['bloomtime']) if column_mapping['bloomtime'] else []
     except KeyError:
-        logger.error(f"Failed to process bloom time for collection with ID {row[16]}")
+        logger.error(f'Failed to process bloom time for collection with ID {plant_id}')
         return None
 
     try:
-        plant_date = process_plant_date(day=row[21], month=row[22], year=row[23]) \
-            if (row[21] and row[22] and row[23]) else None
+        day = column_mapping['plantday']
+        month = column_mapping['plantmonth']
+        year = column_mapping['plantmonth']
+        plant_date = process_plant_date(day=day, month=month, year=year) if (day and month and year) else None
     except ValueError:
-        logger.error(f"Failed to process date for collection with ID {row[16]}")
+        logger.error(f'Failed to process date for collection with ID {plant_id}')
         return None
 
     payload = {
-        "species": {
-            "genus": {
-                "family": {
-                    "name": row[0],
-                    "vernacular_name": row[1]
+        'species': {
+            'genus': {
+                'family': {
+                    'name': column_mapping['familyname'],
+                    'vernacular_name': column_mapping['vernacularfamilyname']
                 },
-                "name": row[2]
+                'name': column_mapping['genusname']
             },
-            "name": row[3],
-            "cultivar": row[4],
-            "vernacular_name": row[5],
-            "habit": row[6],
-            "hardiness": hardiness,
-            "water_regime": row[8],
-            "exposure": row[9],
-            "bloom_time": bloom_times,
-            "plant_size": row[11],
-            "flower_color": row[12],
-            "utah_native": True if row[26].lower() in ['yes', 'x', 'utah native'] else False,
-            "plant_select": True if row[27].lower() in ['yes', 'x'] else False,
-            "deer_resist": True if row[28].lower() in ['yes', 'x'] else False,
-            "rabbit_resist": True if row[29].lower() in ['yes', 'x'] else False,
-            "bee_friend": True if row[30].lower() in ['yes', 'x'] else False,
-            "high_elevation": True if row[31].lower() in ['yes', 'x'] else False,
+            'name': column_mapping['speciesname'],
+            'subspecies': column_mapping['subspecies'],
+            'variety': column_mapping['variety'],
+            'subvariety': column_mapping['subvariety'],
+            'forma': column_mapping['forma'],
+            'subforma': column_mapping['subforma'],
+            'cultivar': column_mapping['cultivar'],
+            'vernacular_name': column_mapping['vernacularname'],
+            'habit': column_mapping['habit'],
+            'hardiness': hardiness,
+            'water_regime': column_mapping['waterregime'],
+            'exposure': column_mapping['exposure'],
+            'bloom_time': bloom_times,
+            'plant_size': column_mapping['plantsize'],
+            'flower_color': column_mapping['colour'],
+            'utah_native': True if column_mapping['utahnative'].lower() in ['yes', 'x', 'utah native'] else False,
+            'plant_select': True if column_mapping['plantselect'].lower() in ['yes', 'x'] else False,
+            'deer_resist': True if column_mapping['deer'].lower() in ['yes', 'x'] else False,
+            'rabbit_resist': True if column_mapping['rabbit'].lower() in ['yes', 'x'] else False,
+            'bee_friend': True if column_mapping['bee'].lower() in ['yes', 'x'] else False,
+            'high_elevation': True if column_mapping['highelevation'].lower() in ['yes', 'x'] else False,
         },
-        "garden": {
-            "area": row[13],
-            "name": row[14],
-            "code": row[15]
+        'garden': {
+            'area': column_mapping['gardenlocalityarea'],
+            'name': column_mapping['gardenlocalityname'],
+            'code': column_mapping['gardenlocalitycode']
         },
-        "location": {
-            "latitude": round(float(row[17]), 6),
-            "longitude": round(float(row[18]), 6)
+        'location': {
+            'latitude': round(float(column_mapping['latitude']), 6),
+            'longitude': round(float(column_mapping['longitude']), 6)
         },
-        "plant_date": plant_date,
-        "plant_id": row[16],
-        "commemoration_category": row[19],
-        "commemoration_person": row[20]
+        'plant_date': plant_date,
+        'plant_id': plant_id,
+        'commemoration_category': column_mapping['commemorationcategory'],
+        'commemoration_person': column_mapping['commemorationperson']
     }
 
     return payload
@@ -168,7 +224,7 @@ def construct_img_filepath(row):
     :return:
     """
     if len(row) < 6:
-        logger.error(f"Invalid row: {row}")
+        logger.error(f'Invalid row: {row}')
         raise ValueError
 
     # If we're not running on the VM with the mapped drive, change the filepath to Box
@@ -191,10 +247,10 @@ def extract_species_info(row):
     Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|cultivar|vernacularname
     """
     payload = {
-        "name": row[4] if row[4] != 'NULL' else None,
-        "cultivar": row[5] if row[5] != 'NULL' else None,
-        "vernacular_name": row[6] if row[6] != 'NULL' else None,
-        "genus": row[3]
+        'name': row[4] if row[4] != 'NULL' else None,
+        'cultivar': row[5] if row[5] != 'NULL' else None,
+        'vernacular_name': row[6] if row[6] != 'NULL' else None,
+        'genus': row[3]
     }
 
     return payload
