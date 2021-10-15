@@ -9,45 +9,17 @@ logger = logging.getLogger(__name__)
 
 def process_bloom_time(bloom_time_string):
     """
-    Takes bloom time returned from the bloomtime column of the
+    Takes bloom time returned from the str05 column of the
     BRAHMS SQL export and converts it into a list that is
     acceptable by the bloom_time ArrayField of the Species model
     on the RBG website.
-    :param bloom_time_string: Tenth element of a row returned by
+    :param bloom_time_string: Bloom time value from a row returned by
     SQLExportReader.get_rows()
     :return: List of month strings representing bloom times.
     """
-    conversion = {
-        'Jan': 'January',
-        'Feb': 'February',
-        'Mar': 'March',
-        'Apr': 'April',
-        'Arp': 'April',  # Common misspelling
-        'MAy': 'May',
-        'May': 'May',
-        'Jun': 'June',
-        'Jul': 'July',
-        'Aug': 'August',
-        'Sep': 'September',
-        'Sept': 'September',
-        'Oct': 'October',
-        'Nov': 'November',
-        'Dec': 'December'
-    }
-    month_list = []
-
-    for month_string in bloom_time_string.split(', '):
-        try:
-            month_list.append(conversion[month_string.strip()])
-        except KeyError:
-            # Probably missing a space between comma
-            for fixed_month_string in month_string.split(','):
-                if fixed_month_string:
-                    try:
-                        month_list.append(conversion[fixed_month_string.strip()])
-                    except KeyError:
-                        logger.error('KeyError while processing:\n' + bloom_time_string)
-                        raise
+    split_list = [month.title() for month in bloom_time_string.split(' ')]
+    month_iter = iter(split_list)
+    month_list = [' '.join([i, next(month_iter)]) if i in ['Early', 'Mid', 'Late'] else i for i in month_iter]
 
     return month_list
 
@@ -93,25 +65,25 @@ def process_hardiness(hardiness_data):
 def get_column_mapping(row):
     """
     Assumes row structure:
-    familyname|vernacularfamilyname|genusname|speciesname|subspecies|variety|subvariety|forma|subforma|cultivar|vernacularname|habit|hardiness|waterregime|exposure|bloomtime|plantsize|colour|gardenlocalityarea|gardenlocalityname|gardenlocalitycode|plantid|latitude|longitude|commemorationcategory|commemorationperson|plantday|plantmonth|plantyear|notonline|lastmodifiedon|str12|str18|str19|str20|str22|str23
+    familyname|vernacularfamilyname|genusname|speciesname|calcfullname|subspecies|variety|subvariety|forma|subforma|cultivar|vernacularname|habit|hardiness|waterregime|exposure|plantsize|colour|gardenlocalityarea|gardenlocalityname|gardenlocalitycode|plantid|latitude|longitude|commemorationcategory|commemorationperson|plantday|plantmonth|plantyear|notonline|lastmodifiedon|str05|str12|str18|str19|str20|str22|str23
     """
     column_mapping = {
         'familyname': row[0],
         'vernacularfamilyname': row[1],
         'genusname': row[2],
         'speciesname': row[3],
-        'subspecies': row[4],
-        'variety': row[5],
-        'subvariety': row[6],
-        'forma': row[7],
-        'subforma': row[8],
-        'cultivar': row[9],
-        'vernacularname': row[10],
-        'habit': row[11],
-        'hardiness': row[12],
-        'waterregime': row[13],
-        'exposure': row[14],
-        'bloomtime': row[15],
+        'calcfullname': row[4],
+        'subspecies': row[5],
+        'variety': row[6],
+        'subvariety': row[7],
+        'forma': row[8],
+        'subforma': row[9],
+        'cultivar': row[10],
+        'vernacularname': row[11],
+        'habit': row[12],
+        'hardiness': row[13],
+        'waterregime': row[14],
+        'exposure': row[15],
         'plantsize': row[16],
         'colour': row[17],
         'gardenlocalityarea': row[18],
@@ -127,12 +99,13 @@ def get_column_mapping(row):
         'plantyear': row[28],
         'notonline': row[29],
         'lastmodified': row[30],
-        'utahnative': row[31],  # str12
-        'plantselect': row[32],  # str18
-        'deer': row[33],  # str19
-        'rabbit': row[34],  # str20
-        'bee': row[35],  # str22
-        'highelevation': row[36]  # str23
+        'bloomtime': row[31],
+        'utahnative': row[32],  # str12
+        'plantselect': row[33],  # str18
+        'deer': row[34],  # str19
+        'rabbit': row[35],  # str20
+        'bee': row[36],  # str22
+        'highelevation': row[37]  # str23
     }
 
     return column_mapping
@@ -176,6 +149,7 @@ def brahms_row_to_payload(row):
                 'name': column_mapping['genusname']
             },
             'name': column_mapping['speciesname'],
+            'full_name': column_mapping['calcfullname'],
             'subspecies': column_mapping['subspecies'],
             'variety': column_mapping['variety'],
             'subvariety': column_mapping['subvariety'],
