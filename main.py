@@ -88,7 +88,7 @@ def post_image(poster, row):
 
         resp = poster.post_species_image(species_pk, img_filepath, copyright_info)
 
-        if resp.status_code != 200 or resp.status_code != 201:
+        if resp and resp.status_code not in [200, 201]:
             root.warning(f"Attempt to post {img_filepath} for species {species_pk} returned status code: "
                          f"{resp.status_code}")
 
