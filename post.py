@@ -57,8 +57,11 @@ class RBGAPIPoster:
 
         try:
             with open(file_path, 'rb') as f:
-                r = self.session.post(url, data={'copyright_info': copyright_info}, files={'image': f})
-                r.raise_for_status()
-                return r
+                try:
+                    r = self.session.post(url, data={'copyright_info': copyright_info}, files={'image': f})
+                    r.raise_for_status()
+                    return r
+                except OSError as e:
+                    logger.error(f'[Species {pk}] Error ({e}) posting: {file_path}')
         except FileNotFoundError:
             logger.error(f'[Species {pk}] Unable to find file: {file_path}')
