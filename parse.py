@@ -191,12 +191,10 @@ def brahms_row_to_payload(row):
 
 def construct_img_filepath(row):
     """
-    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|cultivar|vernacularname
-    :param row:
-    :return:
+    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|subspecies|variety|subvariety|forma|subforma|cultivar
     """
-    if len(row) < 6:
-        logger.error(f'Invalid row: {row}')
+    if len(row) != 11:
+        logger.error(f'Invalid row: {row}. Check image list file and confirm columns match up to what the code is expecting.')
         raise ValueError
 
     # If we're not running on the VM with the mapped drive, change the filepath to Box
@@ -216,13 +214,17 @@ def convert_to_json(dictionary):
 
 def extract_species_info(row):
     """
-    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|cultivar|vernacularname
+    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|subspecies|variety|subvariety|forma|subforma|cultivar
     """
     payload = {
-        'name': row[4] if row[4] != 'NULL' else None,
-        'cultivar': row[5] if row[5] != 'NULL' else None,
-        'vernacular_name': row[6] if row[6] != 'NULL' else None,
-        'genus': row[3]
+        'genus': row[3],
+        'name': row[4] if row[4] else None,
+        'subspecies': row[5] if row[5] else None,
+        'variety': row[6] if row[6] else None,
+        'subvariety': row[7] if row[7] else None,
+        'forma': row[8] if row[8] else None,
+        'subforma': row[9] if row[9] else None,
+        'cultivar': row[10] if row[10] else None,
     }
 
     return payload
@@ -230,7 +232,7 @@ def extract_species_info(row):
 
 def extract_copyright_info(row):
     """
-    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|cultivar|vernacularname
+    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|subspecies|variety|subvariety|forma|subforma|cultivar
     """
     return row[1]
 
