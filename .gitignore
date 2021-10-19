@@ -150,3 +150,6 @@ gen
 # Data
 *.csv
 BRAHMSPHOTOS/
+
+# Config
+config.ini

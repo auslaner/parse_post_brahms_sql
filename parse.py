@@ -246,8 +246,9 @@ class BRAHMSExportReader:
         self.encoding = encoding
         self.delimiter = delimiter
 
-    def get_rows(self):
+    def get_rows(self) -> list:
         with open(self.file_path, encoding=self.encoding) as csvfile:
             reader = csv.reader(csvfile, delimiter=self.delimiter)
             for row in reader:
                 yield row
+

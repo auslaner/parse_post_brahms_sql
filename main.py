@@ -1,7 +1,9 @@
 import argparse
+import configparser
 import logging
 import os
 import sys
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from requests import HTTPError
@@ -9,6 +11,8 @@ from requests import HTTPError
 from parse import BRAHMSExportReader, brahms_row_to_payload, construct_img_filepath, extract_copyright_info, \
     extract_species_info
 from post import RBGAPIPoster
+
+config = configparser.ConfigParser()
 
 log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
 root = logging.getLogger()
@@ -58,7 +62,10 @@ def post_row(poster, row):
             raise
 
 
-def post_plant_collections(poster, plant_data_filepath, delimiter, encoding):
+def post_plant_collections(poster, plant_data_filepath, delimiter, encoding, last_run):
+    """
+    Assumes last modified date is 31st element of row data
+    """
     sql_reader = BRAHMSExportReader(file_path=plant_data_filepath, encoding=encoding, delimiter=delimiter)
 
     processes = []
@@ -66,7 +73,22 @@ def post_plant_collections(poster, plant_data_filepath, delimiter, encoding):
         sql_rows = iter(sql_reader.get_rows())
         next(sql_rows)  # Skip header row
         for row in sql_rows:
-            processes.append(executor.submit(post_row, poster, row))
+            if row[30]:
+                try:
+                    # Most are in ISO Format
+                    last_modified = datetime.fromisoformat(row[30][:-6])
+                except ValueError:
+                    # Others look like 3/1/2021  1:07:38 PM
+                    last_modified = datetime.strptime(row[30][:-6], '%m/%d/%Y %I:%M:%S %p')
+
+                if last_modified > last_run:
+                    processes.append(executor.submit(post_row, poster, row))
+                else:
+                    root.warning(f'Row with plant ID {row[21]} has not been modified ({last_modified}) since last run ({last_run}).')
+                    continue
+            else:
+                # TODO - We may only want to do this initially then ignore records without last modified data
+                processes.append(executor.submit(post_row, poster, row))
 
     for task in as_completed(processes):
         if task.result():
@@ -118,7 +140,19 @@ def post_image_to_species(poster, image_data_filepath):
             root.info(task.result())
 
 
+def write_file():
+    config.write(open('config.ini', 'w'))
+
+
 def main():
+    if not os.path.exists('config.ini'):
+        # Arbitrarily long ago date
+        config['DEFAULT'] = {'last_run': datetime(year=1900, day=1, month=1).isoformat()}
+        write_file()
+
+    config.read('config.ini')
+    last_run = datetime.fromisoformat(config['DEFAULT']['last_run'])
+
     username = os.environ.get('RBG_API_USERNAME')
     password = os.environ.get('RBG_API_PASSWORD')
     if username is None or password is None:
@@ -128,7 +162,7 @@ def main():
 
     if args['plant_data_path']:
         plant_data_filepath = args['plant_data_path']
-        post_plant_collections(poster, plant_data_filepath, args['delimiter'], args['encoding'])
+        post_plant_collections(poster, plant_data_filepath, args['delimiter'], args['encoding'], last_run)
 
     if args['image_data_path']:
         image_data_filepath = args['image_data_path']
@@ -137,3 +171,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+    # Write last run time before exiting
+    config['DEFAULT']['last_run'] = datetime.now().isoformat()
+    with open('config.ini', 'w') as configfile:
+        config.write(configfile)
