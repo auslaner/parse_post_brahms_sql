@@ -92,6 +92,11 @@ def post_image(poster, row):
             root.warning(f"Attempt to post {img_filepath} for species {species_pk} returned status code: "
                          f"{resp.status_code}")
 
+    elif content['count'] == 0:
+        root.warning(f'No species returned when searching with: {species_image_payload}')
+    else:
+        root.warning(f'Multiple species returned when searching with: {species_image_payload}')
+
 
 def post_image_to_species(poster, image_data_filepath):
     try:
