@@ -134,7 +134,7 @@ def post_image_to_species(poster, image_data_filepath, delimiter, encoding, last
     with ThreadPoolExecutor(max_workers=4) as executor:
         for row in img_rows:
             if row[11]:  # last modified data
-                last_modified = datetime.fromisoformat(row[11])
+                last_modified = datetime.fromisoformat(row[11][:-6])
 
                 if last_modified > last_run:
                     processes.append(executor.submit(post_image, poster, row))
