@@ -26,7 +26,7 @@ def process_bloom_time(bloom_time_string):
 
 def process_plant_date(day, month, year):
     try:
-        if (int(day) in range(1, 31)) and \
+        if (int(day) in range(1, 32)) and \
                 (int(month) in range(1, 13)) and \
                 (len(year) == 4):
 
