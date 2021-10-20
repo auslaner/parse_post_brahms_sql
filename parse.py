@@ -201,8 +201,8 @@ def construct_img_filepath(row):
 
     # If we're not running on the VM with the mapped drive, change the filepath to Box
     if sys.platform == 'darwin':
-        box_path = os.path.join(os.path.expanduser('~'), 'Box', 'RBG-Shared', 'Photo Library - Plant Records',
-                                'AA BRAHMS Resized Photos', '')
+        box_path = os.path.join(os.path.expanduser('~'), 'Library', 'CloudStorage', 'Box-Box', 'RBG-Shared',
+                                'Photo Library - Plant Records', 'AA BRAHMS Resized Photos', '')
         path_from_row = os.path.join(row[2].replace('B:\\', box_path), row[0].replace('\ufeff', ''))
     else:
         path_from_row = os.path.join(row[2], row[0].replace('\ufeff', ''))
