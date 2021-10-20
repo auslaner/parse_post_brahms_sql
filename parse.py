@@ -30,9 +30,11 @@ def process_plant_date(day, month, year):
                 (int(month) in range(1, 12)) and \
                 (len(year) == 4):
 
-            return '-'.join([day, month, year])
+            return '-'.join([year, month, day])
+        else:
+            logger.warning(f'Date value invalid: {year}-{month}-{day}')
     except ValueError:
-        logger.error(f'ValueError while processing:\nDay:{day}, Month:{month}, Year:{year}')
+        logger.error(f'ValueError while processing Day:{day}, Month:{month}, Year:{year}')
         raise
 
 
@@ -133,7 +135,7 @@ def brahms_row_to_payload(row):
     try:
         day = column_mapping['plantday']
         month = column_mapping['plantmonth']
-        year = column_mapping['plantmonth']
+        year = column_mapping['plantyear']
         plant_date = process_plant_date(day=day, month=month, year=year) if (day and month and year) else None
     except ValueError:
         logger.error(f'Failed to process date for collection with ID {plant_id}')
