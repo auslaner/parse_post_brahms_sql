@@ -142,7 +142,6 @@ def post_image_to_species(poster, image_data_filepath, delimiter, encoding, last
                     root.warning(f'Image with title "{row[0]}" has not been modified ({last_modified}) since last run ({last_run}).')
                     continue
             else:
-                # TODO - We may only want to do this initially then ignore records without last modified data
                 processes.append(executor.submit(post_image, poster, row))
 
     for task in as_completed(processes):
