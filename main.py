@@ -73,13 +73,13 @@ def post_plant_collections(poster, plant_data_filepath, delimiter, encoding, las
         sql_rows = iter(sql_reader.get_rows())
         next(sql_rows)  # Skip header row
         for row in sql_rows:
-            if row[30]:
+            if row[30]:  # last modified data
                 try:
                     # Most are in ISO Format
                     last_modified = datetime.fromisoformat(row[30][:-6])
                 except ValueError:
                     # Others look like 3/1/2021  1:07:38 PM
-                    last_modified = datetime.strptime(row[30][:-6], '%m/%d/%Y %I:%M:%S %p')
+                    last_modified = datetime.strptime(row[30], '%m/%d/%Y %I:%M:%S %p')
 
                 if last_modified > last_run:
                     processes.append(executor.submit(post_row, poster, row))
@@ -120,20 +120,30 @@ def post_image(poster, row):
         root.warning(f'Multiple species returned when searching with: {species_image_payload}')
 
 
-def post_image_to_species(poster, image_data_filepath):
+def post_image_to_species(poster, image_data_filepath, delimiter, encoding, last_run):
     try:
-        image_location_reader = BRAHMSExportReader(file_path=image_data_filepath, delimiter='|')
+        image_location_reader = BRAHMSExportReader(file_path=image_data_filepath, delimiter=delimiter)
         img_rows = image_location_reader.get_rows()
         next(img_rows)  # Skip header row
     except UnicodeDecodeError:
-        image_location_reader = BRAHMSExportReader(file_path=image_data_filepath, encoding='utf-16le', delimiter='|')
+        image_location_reader = BRAHMSExportReader(file_path=image_data_filepath, encoding=encoding, delimiter=delimiter)
         img_rows = image_location_reader.get_rows()
         next(img_rows)  # Skip header row
 
     processes = []
     with ThreadPoolExecutor(max_workers=4) as executor:
         for row in img_rows:
-            processes.append(executor.submit(post_image, poster, row))
+            if row[11]:  # last modified data
+                last_modified = datetime.fromisoformat(row[11])
+
+                if last_modified > last_run:
+                    processes.append(executor.submit(post_image, poster, row))
+                else:
+                    root.warning(f'Image with title "{row[0]}" has not been modified ({last_modified}) since last run ({last_run}).')
+                    continue
+            else:
+                # TODO - We may only want to do this initially then ignore records without last modified data
+                processes.append(executor.submit(post_image, poster, row))
 
     for task in as_completed(processes):
         if task.result():
@@ -166,7 +176,7 @@ def main():
 
     if args['image_data_path']:
         image_data_filepath = args['image_data_path']
-        post_image_to_species(poster, image_data_filepath)
+        post_image_to_species(poster, image_data_filepath, args['delimiter'], args['encoding'], last_run)
 
 
 if __name__ == '__main__':

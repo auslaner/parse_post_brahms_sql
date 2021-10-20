@@ -191,9 +191,9 @@ def brahms_row_to_payload(row):
 
 def construct_img_filepath(row):
     """
-    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|subspecies|variety|subvariety|forma|subforma|cultivar
+    Assumes row structure: imagefile|copyright|directoryname|genusname|speciesname|subspecies|variety|subvariety|forma|subforma|cultivar|lastmodifiedon
     """
-    if len(row) != 11:
+    if len(row) != 12:
         logger.error(f'Invalid row: {row}. Check image list file and confirm columns match up to what the code is expecting.')
         raise ValueError
 
