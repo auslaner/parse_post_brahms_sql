@@ -88,7 +88,8 @@ def post_plant_collections(poster, plant_data_filepath, delimiter, encoding, las
                     continue
             else:
                 # TODO - We may only want to do this initially then ignore records without last modified data
-                processes.append(executor.submit(post_row, poster, row))
+                #processes.append(executor.submit(post_row, poster, row))
+                pass
 
     for task in as_completed(processes):
         if task.result():
