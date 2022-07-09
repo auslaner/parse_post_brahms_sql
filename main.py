@@ -87,7 +87,7 @@ def post_plant_collections(poster, plant_data_filepath, delimiter, encoding, las
                     root.warning(f'Row with plant ID {row[21]} has not been modified ({last_modified}) since last run ({last_run}).')
                     continue
             else:
-                # TODO - We may only want to do this initially then ignore records without last modified data
+                # Uncomment to also post records without last modified date
                 #processes.append(executor.submit(post_row, poster, row))
                 pass
 
