@@ -220,13 +220,13 @@ def extract_species_info(row):
     """
     payload = {
         'genus': row[3],
-        'name': row[4] if row[4] else None,
-        'subspecies': row[5] if row[5] else None,
-        'variety': row[6] if row[6] else None,
-        'subvariety': row[7] if row[7] else None,
-        'forma': row[8] if row[8] else None,
-        'subforma': row[9] if row[9] else None,
-        'cultivar': row[10] if row[10] else None,
+        'name': row[4] if row[4] else '',
+        'subspecies': row[5] if row[5] else '',
+        'variety': row[6] if row[6] else '',
+        'subvariety': row[7] if row[7] else '',
+        'forma': row[8] if row[8] else '',
+        'subforma': row[9] if row[9] else '',
+        'cultivar': row[10] if row[10] else '',
     }
 
     return payload
