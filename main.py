@@ -16,11 +16,10 @@ config = configparser.ConfigParser()
 
 log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
 root = logging.getLogger()
-root.setLevel(logging.WARNING)
+root.setLevel(logging.INFO)
 
 fileHandler = logging.FileHandler("main.log")
 fileHandler.setFormatter(log_formatter)
-fileHandler.setLevel(logging.WARNING)
 root.addHandler(fileHandler)
 
 consoleHandler = logging.StreamHandler()
@@ -56,7 +55,7 @@ def post_row(poster, row):
             if resp.status_code != 201:
                 root.warning(f"Attempt to post {payload} returned status code: {resp.status_code}")
         except HTTPError as e:
-            root.error(e)
+            root.error(f'Error posting row: {row}\n\t{e}')
             if len(e.response.content) < 1000:
                 root.error(e.response.content)
             raise
@@ -88,8 +87,8 @@ def post_plant_collections(poster, plant_data_filepath, delimiter, encoding, las
                     continue
             else:
                 # Uncomment to also post records without last modified date
-                #processes.append(executor.submit(post_row, poster, row))
-                pass
+                processes.append(executor.submit(post_row, poster, row))
+                #pass
 
     for task in as_completed(processes):
         if task.result():
@@ -97,7 +96,7 @@ def post_plant_collections(poster, plant_data_filepath, delimiter, encoding, las
 
 
 def post_image(poster, row):
-    print(f"\nAttempting to post image row: {row}\n")
+    root.info(f"\nAttempting to post image row: {row}\n")
 
     img_filepath = construct_img_filepath(row)
     species_image_payload = extract_species_info(row)
