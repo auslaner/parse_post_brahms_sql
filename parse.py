@@ -24,7 +24,7 @@ def process_bloom_time(bloom_time_string):
     return month_list
 
 
-def process_plant_date(day, month, year):
+def process_plant_date(day: str, month: str, year: str, plant_id: str = None):
     try:
         if (int(day) in range(1, 32)) and \
                 (int(month) in range(1, 13)) and \
@@ -32,7 +32,7 @@ def process_plant_date(day, month, year):
 
             return '-'.join([year, month, day])
         else:
-            logger.warning(f'Date value invalid: {year}-{month}-{day}')
+            logger.warning(f'[{plant_id}] Date value invalid: {year}-{month}-{day}')
     except ValueError:
         logger.error(f'ValueError while processing Day:{day}, Month:{month}, Year:{year}')
         raise
@@ -136,7 +136,7 @@ def brahms_row_to_payload(row):
         day = column_mapping['plantday']
         month = column_mapping['plantmonth']
         year = column_mapping['plantyear']
-        plant_date = process_plant_date(day=day, month=month, year=year) if (day and month and year) else None
+        plant_date = process_plant_date(day=day, month=month, year=year, plant_id=plant_id) if (day and month and year) else None
     except ValueError:
         logger.error(f'Failed to process date for collection with ID {plant_id}')
         return None
@@ -179,8 +179,8 @@ def brahms_row_to_payload(row):
             'code': column_mapping['gardenlocalitycode']
         },
         'location': {
-            'latitude': round(float(column_mapping['latitude']), 6),
-            'longitude': round(float(column_mapping['longitude']), 6)
+            'latitude': round(float(column_mapping['latitude']), 6) if len(column_mapping['latitude']) > 0 else None,
+            'longitude': round(float(column_mapping['longitude']), 6) if len(column_mapping['longitude']) > 0 else None
         },
         'plant_date': plant_date,
         'plant_id': plant_id,
