@@ -37,9 +37,9 @@ parser.add_argument('--plant-data-path',
                     help='Path to CSV file containing BRAHMS data export of living collections')
 parser.add_argument('--image-data-path',
                     help='Path to CSV file containing BRAHMS data export of species images and related data')
-parser.add_argument('--delimiter', default=',',
+parser.add_argument('--delimiter', default='|',
                     help='Delimiter to use when parsing CSV files')
-parser.add_argument('--encoding', default='utf-8',
+parser.add_argument('--encoding', default='utf-16',
                     help='Encoding to use when reading CSV files')
 parser.set_defaults(ssl=True)
 
@@ -84,11 +84,12 @@ def post_plant_collections(poster, plant_data_filepath, delimiter, encoding, las
                     processes.append(executor.submit(post_row, poster, row))
                 else:
                     root.warning(f'Row with plant ID {row[21]} has not been modified ({last_modified}) since last run ({last_run}).')
-                    continue
+                    # Uncomment to also post these records anyway
+                    processes.append(executor.submit(post_row, poster, row))
             else:
                 # Uncomment to also post records without last modified date
                 processes.append(executor.submit(post_row, poster, row))
-                #pass
+                pass
 
     for task in as_completed(processes):
         if task.result():

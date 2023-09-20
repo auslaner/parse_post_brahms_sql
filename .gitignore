@@ -148,6 +148,7 @@ out
 gen
 
 # Data
+csv_exports/
 *.csv
 BRAHMSPHOTOS/
 
